@@ -997,6 +997,53 @@
   }
   ::-webkit-scrollbar-thumb:hover{background:#aebdb5;background-clip:content-box}
 
+  .view-toggles{
+    display:flex;
+    align-items:center;
+    gap:5px;
+    padding:4px;
+    border:1px solid rgba(16,25,21,.10);
+    border-radius:8px;
+    background:rgba(255,255,255,.70);
+    box-shadow:0 8px 20px rgba(16,25,21,.04);
+  }
+  .view-toggle{
+    min-height:30px;
+    padding:0 9px;
+    border:1px solid transparent;
+    border-radius:6px;
+    color:#63716a;
+    font-size:12px;
+    font-weight:800;
+    background:transparent;
+  }
+  .view-toggle:hover{
+    color:#101915;
+    background:#f2f6f3;
+  }
+  .view-toggle.active{
+    color:#fff;
+    border-color:#2258f2;
+    background:linear-gradient(135deg,#2258f2,#163fc4);
+    box-shadow:0 8px 18px rgba(34,88,242,.18);
+  }
+  [data-view-panel][hidden]{display:none!important}
+  body.hide-prep .rail{display:none!important}
+  body.hide-side .side{display:none!important}
+  body.hide-prep.hide-side .workspace{grid-template-columns:minmax(560px,1fr)}
+  body.hide-prep:not(.hide-side) .workspace{grid-template-columns:minmax(520px,1fr) 380px}
+  body:not(.hide-prep).hide-side .workspace{grid-template-columns:320px minmax(520px,1fr)}
+  body.hide-runtime .stage{grid-template-rows:minmax(320px,1fr) 268px}
+  body.hide-runtime.hide-side .stage{grid-template-rows:minmax(360px,1fr) 280px}
+  body.hide-runtime .video-panel{min-height:420px}
+  body.simple-view{
+    background:
+      linear-gradient(180deg,#f8faf8 0%,#eef3ef 100%);
+  }
+  body.simple-view::before{
+    background:linear-gradient(90deg,rgba(255,255,255,.62),transparent 28%,transparent 72%,rgba(255,255,255,.55));
+  }
+
   @media (max-width:1180px){
     body{overflow:auto}
     .app{height:auto;min-height:100vh}
@@ -1005,6 +1052,11 @@
     .top-actions{justify-content:flex-start;flex-wrap:wrap}
     .workspace{grid-template-columns:1fr;min-height:0}
     .stage{grid-template-rows:auto auto}
+    body.hide-prep.hide-side .workspace,
+    body.hide-prep:not(.hide-side) .workspace,
+    body:not(.hide-prep).hide-side .workspace{grid-template-columns:1fr}
+    body.hide-runtime .stage,
+    body.hide-runtime.hide-side .stage{grid-template-rows:auto auto}
     .video-panel{min-height:430px}
     .runtime-grid{grid-template-columns:1fr}
     .rail,.side{min-height:auto}
@@ -1018,6 +1070,8 @@
     .grid2,.meta-grid,.ai-score,.config-grid,.quality-grid,.capability-grid{grid-template-columns:1fr}
     .speaker-row{grid-template-columns:1fr}
     .brand small{display:none}
+    .view-toggles{width:100%;overflow:auto;justify-content:flex-start}
+    .view-toggle{white-space:nowrap}
     .btn{width:100%}
     .top-actions .btn,.top-actions .status-pill{width:auto}
   }
@@ -1037,6 +1091,13 @@
       <input id="meetingTitle" value="产品周会：轻量级会议助手评审">
     </div>
     <div class="top-actions">
+      <div id="viewToggles" class="view-toggles" aria-label="选择显示的辅助面板">
+        <button class="view-toggle" type="button" data-view-toggle="prep">会前</button>
+        <button class="view-toggle" type="button" data-view-toggle="runtime">低延迟</button>
+        <button class="view-toggle" type="button" data-view-toggle="follow">跟进</button>
+        <button class="view-toggle" type="button" data-view-toggle="transcript">记录</button>
+        <button class="view-toggle" type="button" data-view-toggle="minutes">纪要</button>
+      </div>
       <div id="recordStatus" class="status-pill"><i class="status-dot"></i><span>待开始</span></div>
       <button id="resetDemo" class="btn subtle" type="button">重置示例</button>
       <button id="exportMd" class="btn primary" type="button">导出纪要</button>
@@ -1044,8 +1105,8 @@
   </header>
 
   <main class="workspace">
-    <aside class="rail">
-      <section class="panel">
+    <aside class="rail" data-view-panel="prep">
+      <section class="panel" data-view-panel="runtime">
         <div class="panel-head">
           <div class="panel-title"><span></span>会前准备</div>
           <button id="addAgenda" class="icon-btn" type="button" title="新增议题">+</button>
@@ -1199,7 +1260,7 @@
     </section>
 
     <aside class="side">
-      <section class="panel" style="flex:0 0 196px">
+      <section class="panel" style="flex:0 0 196px" data-view-panel="follow">
         <div class="panel-head">
           <div class="panel-title"><span class="violet"></span>侧栏跟进</div>
           <div class="chip blue" id="meetingTimer">00:00</div>
@@ -1209,7 +1270,7 @@
         </div>
       </section>
 
-      <section class="panel" style="flex:0 0 218px">
+      <section class="panel" style="flex:0 0 218px" data-view-panel="follow">
         <div class="panel-head">
           <div class="panel-title"><span class="teal"></span>待办状态</div>
         </div>
@@ -1218,7 +1279,7 @@
         </div>
       </section>
 
-      <section class="panel" style="flex:1 1 auto">
+      <section class="panel" style="flex:1 1 auto" data-view-panel="transcript">
         <div class="panel-head">
           <div class="panel-title"><span></span>实时记录</div>
           <div class="chip" id="segmentCount">0 条</div>
@@ -1228,7 +1289,7 @@
         </div>
       </section>
 
-      <section class="panel" style="flex:1 1 auto">
+      <section class="panel" style="flex:1 1 auto" data-view-panel="minutes">
         <div class="panel-head">
           <div class="panel-title"><span class="orange"></span>会议纪要</div>
           <button id="copyMinutes" class="btn subtle" type="button">复制</button>
@@ -1271,8 +1332,16 @@
     ],
     segments:[]
   };
+  const defaultViewPrefs = {
+    prep:false,
+    runtime:false,
+    follow:false,
+    transcript:false,
+    minutes:true
+  };
 
   let state = loadState();
+  let viewPrefs = loadViewPreferences();
   let recognition = null;
   let recording = false;
   let meetingStart = null;
@@ -1320,6 +1389,42 @@
 
   function saveState(){
     localStorage.setItem("meeting-assistant-state", JSON.stringify(state));
+  }
+
+  function loadViewPreferences(){
+    try{
+      const saved = JSON.parse(localStorage.getItem("meeting-assistant-view") || "{}");
+      return { ...defaultViewPrefs, ...saved };
+    }catch(error){
+      return { ...defaultViewPrefs };
+    }
+  }
+
+  function saveViewPreferences(){
+    localStorage.setItem("meeting-assistant-view", JSON.stringify(viewPrefs));
+  }
+
+  function applyViewPreferences(){
+    document.querySelectorAll("[data-view-panel]").forEach(panel => {
+      const key = panel.dataset.viewPanel;
+      panel.hidden = !viewPrefs[key];
+    });
+    document.querySelectorAll("[data-view-toggle]").forEach(button => {
+      const key = button.dataset.viewToggle;
+      button.classList.toggle("active", !!viewPrefs[key]);
+      button.setAttribute("aria-pressed", viewPrefs[key] ? "true" : "false");
+    });
+    const sideVisible = viewPrefs.follow || viewPrefs.transcript || viewPrefs.minutes;
+    document.body.classList.toggle("hide-prep", !viewPrefs.prep);
+    document.body.classList.toggle("hide-runtime", !viewPrefs.runtime);
+    document.body.classList.toggle("hide-side", !sideVisible);
+    document.body.classList.toggle("simple-view", !viewPrefs.prep && !viewPrefs.runtime && !viewPrefs.follow && !viewPrefs.transcript);
+  }
+
+  function toggleViewPanel(key){
+    viewPrefs[key] = !viewPrefs[key];
+    saveViewPreferences();
+    applyViewPreferences();
   }
 
   function toast(message){
@@ -2357,7 +2462,13 @@ ${section("已过滤内容", ignored.map(seg => `[${seg.time}] ${seg.speaker}：
   function bindEvents(){
     $("#meetingDate").value = today;
     restoreRuntimeConfig();
+    applyViewPreferences();
     runCapabilityCheck(false);
+    $("#viewToggles").addEventListener("click", event => {
+      const button = event.target.closest("[data-view-toggle]");
+      if(!button) return;
+      toggleViewPanel(button.dataset.viewToggle);
+    });
     ["signalingUrl","asrUrl","llmUrl","diarizationUrl","hotwords"].forEach(id => {
       $(`#${id}`).addEventListener("input", () => {
         persistRuntimeConfig();
