@@ -1,0 +1,2270 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>轻量级视频会议助手</title>
+<style>
+  :root{
+    --bg:#f6f7f4;
+    --surface:#ffffff;
+    --surface-2:#eef3f0;
+    --ink:#17211d;
+    --muted:#64706b;
+    --line:#d9dfda;
+    --line-strong:#aab5ae;
+    --blue:#1f5eff;
+    --teal:#0a8f7a;
+    --orange:#e36b2c;
+    --violet:#6d45d8;
+    --yellow:#ffd84d;
+    --red:#c73d4a;
+    --green:#197b4d;
+    --shadow:0 18px 55px rgba(27,38,32,.10);
+    --radius:8px;
+    --font:"Microsoft YaHei UI","Microsoft YaHei","PingFang SC","Segoe UI",system-ui,sans-serif;
+    --mono:"Cascadia Code","Consolas","SFMono-Regular",ui-monospace,monospace;
+  }
+
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;
+    overflow:hidden;
+    color:var(--ink);
+    font-family:var(--font);
+    background:
+      linear-gradient(90deg,rgba(23,33,29,.04) 1px,transparent 1px),
+      linear-gradient(180deg,rgba(23,33,29,.04) 1px,transparent 1px),
+      radial-gradient(circle at 15% 0%,rgba(255,216,77,.28),transparent 28%),
+      linear-gradient(135deg,#f7f7f1,#edf4f1 52%,#f9f6ef);
+    background-size:32px 32px,32px 32px,100% 100%,100% 100%;
+  }
+
+  button,input,textarea,select{font:inherit}
+  button{
+    border:0;
+    cursor:pointer;
+    color:inherit;
+    background:none;
+  }
+  button:disabled{cursor:not-allowed;opacity:.5}
+  input,textarea,select{
+    width:100%;
+    border:1px solid var(--line);
+    border-radius:6px;
+    background:#fff;
+    color:var(--ink);
+    outline:none;
+  }
+  input,select{height:38px;padding:0 10px}
+  textarea{min-height:92px;resize:vertical;padding:10px 12px;line-height:1.55}
+  input:focus,textarea:focus,select:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(31,94,255,.12)}
+
+  .app{
+    height:100vh;
+    display:grid;
+    grid-template-rows:64px 1fr;
+  }
+  .topbar{
+    display:grid;
+    grid-template-columns:minmax(220px,1fr) auto minmax(260px,1fr);
+    align-items:center;
+    gap:18px;
+    padding:0 20px;
+    background:rgba(255,255,255,.82);
+    border-bottom:1px solid rgba(23,33,29,.10);
+    backdrop-filter:blur(16px);
+    z-index:5;
+  }
+  .brand{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    min-width:0;
+  }
+  .brand-mark{
+    width:36px;
+    height:36px;
+    border-radius:8px;
+    display:grid;
+    place-items:center;
+    color:#fff;
+    font-weight:800;
+    background:conic-gradient(from 210deg,var(--blue),var(--teal),var(--orange),var(--blue));
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.45);
+  }
+  .brand h1{
+    margin:0;
+    font-size:18px;
+    line-height:1.15;
+    font-weight:800;
+    letter-spacing:0;
+    white-space:nowrap;
+  }
+  .brand small{
+    display:block;
+    margin-top:2px;
+    color:var(--muted);
+    font-size:12px;
+  }
+  .meeting-name{
+    min-width:220px;
+    max-width:560px;
+  }
+  .meeting-name input{
+    height:42px;
+    border-color:transparent;
+    background:#f2f5f2;
+    text-align:center;
+    font-size:18px;
+    font-weight:800;
+  }
+  .top-actions{
+    display:flex;
+    justify-content:flex-end;
+    align-items:center;
+    gap:8px;
+    min-width:0;
+  }
+  .status-pill{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    height:34px;
+    padding:0 12px;
+    border:1px solid var(--line);
+    border-radius:999px;
+    background:#fff;
+    color:var(--muted);
+    font-size:13px;
+    white-space:nowrap;
+  }
+  .status-dot{
+    width:8px;
+    height:8px;
+    border-radius:50%;
+    background:var(--line-strong);
+  }
+  .status-pill.live .status-dot{
+    background:var(--red);
+    box-shadow:0 0 0 6px rgba(199,61,74,.12);
+  }
+  .btn{
+    min-height:38px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    padding:0 13px;
+    border:1px solid var(--line);
+    border-radius:6px;
+    background:#fff;
+    color:var(--ink);
+    font-weight:700;
+    white-space:nowrap;
+    transition:transform .16s ease,box-shadow .16s ease,background .16s ease,border-color .16s ease;
+  }
+  .btn:hover{transform:translateY(-1px);box-shadow:0 8px 22px rgba(25,35,30,.10)}
+  .btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}
+  .btn.success{background:var(--teal);border-color:var(--teal);color:#fff}
+  .btn.danger{background:var(--red);border-color:var(--red);color:#fff}
+  .btn.subtle{background:#f2f5f2}
+  .icon-btn{
+    width:36px;
+    height:36px;
+    display:inline-grid;
+    place-items:center;
+    border:1px solid var(--line);
+    border-radius:6px;
+    background:#fff;
+    font-weight:900;
+  }
+  .icon-btn:hover{border-color:var(--line-strong)}
+
+  .workspace{
+    min-height:0;
+    display:grid;
+    grid-template-columns:320px minmax(420px,1fr) 380px;
+    gap:14px;
+    padding:14px;
+  }
+  .rail,.side{
+    min-height:0;
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+  }
+  .stage{
+    min-height:0;
+    display:grid;
+    grid-template-rows:minmax(240px,1fr) 252px 268px;
+    gap:12px;
+  }
+  .panel{
+    min-height:0;
+    border:1px solid rgba(23,33,29,.10);
+    border-radius:var(--radius);
+    background:rgba(255,255,255,.88);
+    box-shadow:var(--shadow);
+    overflow:hidden;
+  }
+  .panel-head{
+    height:46px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    padding:0 14px;
+    border-bottom:1px solid var(--line);
+    background:rgba(248,250,247,.92);
+  }
+  .panel-title{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    min-width:0;
+    font-size:14px;
+    font-weight:850;
+  }
+  .panel-title span:first-child{
+    width:8px;
+    height:18px;
+    border-radius:999px;
+    background:var(--blue);
+    flex:0 0 auto;
+  }
+  .panel-title .teal{background:var(--teal)}
+  .panel-title .orange{background:var(--orange)}
+  .panel-title .violet{background:var(--violet)}
+  .panel-actions{display:flex;gap:6px;align-items:center}
+  .panel-body{
+    min-height:0;
+    padding:14px;
+    overflow:auto;
+  }
+  .stack{display:flex;flex-direction:column;gap:12px}
+  .row{display:flex;gap:8px;align-items:center}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .field label{
+    display:block;
+    margin:0 0 6px;
+    color:var(--muted);
+    font-size:12px;
+    font-weight:750;
+  }
+
+  .list{display:flex;flex-direction:column;gap:8px}
+  .item{
+    display:grid;
+    grid-template-columns:auto 1fr auto;
+    gap:9px;
+    align-items:start;
+    padding:10px;
+    border:1px solid var(--line);
+    border-radius:8px;
+    background:#fff;
+  }
+  .drag{
+    width:22px;
+    height:22px;
+    display:grid;
+    place-items:center;
+    color:var(--muted);
+    font-family:var(--mono);
+    font-size:12px;
+    background:#f2f5f2;
+    border-radius:5px;
+  }
+  .item-main{min-width:0}
+  .item-main input{height:34px}
+  .meta-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:6px;
+    margin-top:7px;
+  }
+  .mini-select,.mini-input{
+    height:30px;
+    padding:0 8px;
+    font-size:12px;
+    background:#fbfcfb;
+  }
+  .check{
+    width:22px;
+    height:22px;
+    border:1px solid var(--line-strong);
+    border-radius:6px;
+    display:grid;
+    place-items:center;
+    background:#fff;
+    color:transparent;
+    font-weight:900;
+    flex:0 0 auto;
+  }
+  .check.done{
+    color:#fff;
+    border-color:var(--green);
+    background:var(--green);
+  }
+
+  .video-panel{
+    position:relative;
+    min-height:0;
+    display:grid;
+    grid-template-rows:1fr auto;
+    overflow:hidden;
+    background:#101816;
+  }
+  .video-grid{
+    min-height:0;
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    grid-auto-rows:minmax(150px,1fr);
+    gap:1px;
+    background:#2a3430;
+  }
+  .tile{
+    position:relative;
+    display:grid;
+    place-items:center;
+    overflow:hidden;
+    background:
+      linear-gradient(135deg,rgba(31,94,255,.26),transparent 34%),
+      linear-gradient(315deg,rgba(10,143,122,.22),transparent 42%),
+      #17211d;
+    color:#fff;
+  }
+  .tile.active{box-shadow:inset 0 0 0 3px var(--yellow)}
+  .tile video{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+  }
+  .avatar{
+    width:74px;
+    height:74px;
+    border-radius:50%;
+    display:grid;
+    place-items:center;
+    background:rgba(255,255,255,.12);
+    border:1px solid rgba(255,255,255,.25);
+    font-size:26px;
+    font-weight:850;
+  }
+  .tile-name{
+    position:absolute;
+    left:10px;
+    bottom:10px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+    min-height:30px;
+    padding:0 10px;
+    border-radius:999px;
+    background:rgba(8,14,12,.72);
+    color:#fff;
+    font-size:13px;
+    backdrop-filter:blur(8px);
+  }
+  .mic-dot{
+    width:8px;
+    height:8px;
+    border-radius:50%;
+    background:var(--line-strong);
+  }
+  .tile.active .mic-dot{background:var(--yellow)}
+  .call-controls{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    padding:10px;
+    background:rgba(16,24,22,.96);
+    color:#fff;
+  }
+  .call-controls .btn{
+    min-height:36px;
+    background:rgba(255,255,255,.12);
+    border-color:rgba(255,255,255,.18);
+    color:#fff;
+  }
+  .call-controls .btn.primary{background:var(--blue);border-color:var(--blue)}
+  .call-controls .btn.danger{background:var(--red);border-color:var(--red)}
+  .caption{
+    min-width:0;
+    color:#d6e3dc;
+    font-size:13px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+
+  .capture{
+    display:grid;
+    grid-template-columns:1fr 250px;
+    gap:12px;
+  }
+  .capture-left,.capture-right{
+    min-height:0;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .speaker-row{
+    display:grid;
+    grid-template-columns:1fr auto;
+    gap:8px;
+  }
+  .speaker-chips{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+  }
+  .chip{
+    min-height:28px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
+    padding:0 9px;
+    border:1px solid var(--line);
+    border-radius:999px;
+    background:#fff;
+    color:var(--muted);
+    font-size:12px;
+    font-weight:750;
+  }
+  .chip.active{background:var(--ink);border-color:var(--ink);color:#fff}
+  .chip.blue{background:rgba(31,94,255,.10);border-color:rgba(31,94,255,.24);color:#1949c9}
+  .chip.teal{background:rgba(10,143,122,.10);border-color:rgba(10,143,122,.24);color:#087765}
+  .chip.orange{background:rgba(227,107,44,.12);border-color:rgba(227,107,44,.28);color:#9d491f}
+  .chip.red{background:rgba(199,61,74,.10);border-color:rgba(199,61,74,.26);color:#a0323d}
+  .chip.violet{background:rgba(109,69,216,.10);border-color:rgba(109,69,216,.26);color:#5835b5}
+  .capture-actions{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    align-items:center;
+  }
+  .ai-score{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:8px;
+  }
+  .metric{
+    padding:10px;
+    border:1px solid var(--line);
+    border-radius:8px;
+    background:#fbfcfb;
+  }
+  .metric strong{
+    display:block;
+    font-size:22px;
+    line-height:1;
+  }
+  .metric span{
+    display:block;
+    margin-top:6px;
+    color:var(--muted);
+    font-size:12px;
+  }
+
+  .agenda-progress{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+  .progress-row{
+    display:grid;
+    grid-template-columns:1fr auto;
+    gap:8px;
+    align-items:center;
+    padding:9px;
+    border:1px solid var(--line);
+    border-radius:8px;
+    background:#fff;
+  }
+  .progress-row strong{
+    display:block;
+    margin-bottom:7px;
+    font-size:13px;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .bar{
+    height:7px;
+    overflow:hidden;
+    border-radius:999px;
+    background:#edf1ed;
+  }
+  .bar i{
+    display:block;
+    height:100%;
+    width:0;
+    border-radius:999px;
+    background:linear-gradient(90deg,var(--teal),var(--blue));
+  }
+
+  .stream{
+    display:flex;
+    flex-direction:column;
+    gap:9px;
+  }
+  .segment{
+    padding:10px;
+    border:1px solid var(--line);
+    border-left:4px solid var(--blue);
+    border-radius:8px;
+    background:#fff;
+  }
+  .segment.noise{
+    border-left-color:var(--line-strong);
+    background:#f7f8f6;
+    color:#6f7773;
+  }
+  .segment.action{border-left-color:var(--teal)}
+  .segment.decision{border-left-color:var(--violet)}
+  .segment.risk{border-left-color:var(--orange)}
+  .segment.block{border-left-color:var(--red)}
+  .segment.pending{border-left-color:var(--yellow)}
+  .segment.opposition{border-left-color:var(--orange)}
+  .seg-top{
+    display:grid;
+    grid-template-columns:1fr auto;
+    gap:8px;
+    align-items:center;
+    margin-bottom:7px;
+  }
+  .seg-speaker{
+    min-width:0;
+    font-size:13px;
+    font-weight:850;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .seg-time{
+    color:var(--muted);
+    font-family:var(--mono);
+    font-size:11px;
+  }
+  .seg-text{
+    font-size:13px;
+    line-height:1.55;
+  }
+  .semantic-strip{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+    margin-top:8px;
+  }
+  .semantic-pill{
+    min-height:24px;
+    display:inline-flex;
+    align-items:center;
+    gap:5px;
+    padding:0 8px;
+    border:1px solid var(--line);
+    border-radius:999px;
+    background:#f7f9f7;
+    color:var(--muted);
+    font-size:11px;
+    font-weight:750;
+  }
+  .semantic-pill.strong{background:rgba(199,61,74,.10);border-color:rgba(199,61,74,.22);color:var(--red)}
+  .semantic-pill.warn{background:rgba(227,107,44,.12);border-color:rgba(227,107,44,.22);color:#a34a1d}
+  .semantic-pill.info{background:rgba(31,94,255,.10);border-color:rgba(31,94,255,.22);color:#1949c9}
+  .seg-tools{
+    display:grid;
+    grid-template-columns:1fr auto;
+    gap:8px;
+    margin-top:8px;
+  }
+  .seg-tools select{height:30px;font-size:12px}
+
+  .minutes{
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+  }
+  .minutes-section{
+    border:1px solid var(--line);
+    border-radius:8px;
+    background:#fff;
+    overflow:hidden;
+  }
+  .minutes-section h3{
+    margin:0;
+    padding:10px 12px;
+    border-bottom:1px solid var(--line);
+    background:#f6f8f6;
+    font-size:14px;
+  }
+  .minutes-section ul{
+    margin:0;
+    padding:10px 12px 10px 28px;
+  }
+  .minutes-section li{
+    margin:0 0 8px;
+    font-size:13px;
+    line-height:1.55;
+  }
+  .minutes-section li:last-child{margin-bottom:0}
+  .empty{
+    padding:12px;
+    color:var(--muted);
+    font-size:13px;
+    line-height:1.5;
+  }
+  .todo-row{
+    display:grid;
+    grid-template-columns:auto 1fr auto;
+    gap:8px;
+    align-items:center;
+    padding:9px;
+    border:1px solid var(--line);
+    border-radius:8px;
+    background:#fff;
+  }
+  .todo-title{
+    min-width:0;
+    font-size:13px;
+    font-weight:780;
+  }
+  .todo-title span{
+    display:block;
+    margin-top:3px;
+    color:var(--muted);
+    font-size:11px;
+    font-weight:500;
+  }
+  .todo-row select{height:30px;font-size:12px}
+
+  .toast{
+    position:fixed;
+    right:18px;
+    bottom:18px;
+    z-index:20;
+    max-width:360px;
+    padding:12px 14px;
+    border-radius:8px;
+    background:#17211d;
+    color:#fff;
+    box-shadow:0 20px 50px rgba(0,0,0,.22);
+    transform:translateY(20px);
+    opacity:0;
+    pointer-events:none;
+    transition:.22s ease;
+  }
+  .toast.show{transform:translateY(0);opacity:1}
+  .hidden{display:none!important}
+
+  .runtime-grid{
+    display:grid;
+    grid-template-columns:1.15fr .85fr;
+    gap:12px;
+    min-height:0;
+  }
+  .runtime-card{
+    min-height:0;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    padding:12px;
+    border:1px solid var(--line);
+    border-radius:8px;
+    background:#fff;
+  }
+  .runtime-card h3{
+    margin:0;
+    font-size:14px;
+    line-height:1.25;
+  }
+  .config-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+  }
+  .quality-grid{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:8px;
+  }
+  .quality-card{
+    min-width:0;
+    padding:9px;
+    border:1px solid var(--line);
+    border-radius:8px;
+    background:#fbfcfb;
+  }
+  .quality-card strong{
+    display:block;
+    font-family:var(--mono);
+    font-size:16px;
+    line-height:1.1;
+  }
+  .quality-card span{
+    display:block;
+    margin-top:6px;
+    color:var(--muted);
+    font-size:11px;
+    line-height:1.25;
+  }
+  .capability-grid{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:7px;
+  }
+  .capability{
+    min-height:30px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+    padding:6px 8px;
+    border:1px solid var(--line);
+    border-radius:7px;
+    background:#fbfcfb;
+    font-size:12px;
+  }
+  .capability i{
+    width:9px;
+    height:9px;
+    border-radius:50%;
+    background:var(--line-strong);
+    flex:0 0 auto;
+  }
+  .capability.pass i{background:var(--green)}
+  .capability.warn i{background:var(--orange)}
+  .capability.fail i{background:var(--red)}
+  .stream-preview{
+    min-height:44px;
+    padding:9px 10px;
+    border:1px dashed var(--line-strong);
+    border-radius:8px;
+    color:var(--muted);
+    background:#fbfcfb;
+    font-size:12px;
+    line-height:1.45;
+  }
+
+  @media (max-width:1180px){
+    body{overflow:auto}
+    .app{height:auto;min-height:100vh}
+    .topbar{grid-template-columns:1fr;gap:10px;height:auto;padding:12px 14px}
+    .meeting-name{max-width:none;width:100%}
+    .top-actions{justify-content:flex-start;flex-wrap:wrap}
+    .workspace{grid-template-columns:1fr;min-height:0}
+    .stage{grid-template-rows:auto auto}
+    .video-panel{min-height:430px}
+    .runtime-grid{grid-template-columns:1fr}
+    .rail,.side{min-height:auto}
+  }
+  @media (max-width:680px){
+    body{overflow:auto}
+    .workspace{padding:8px;gap:8px}
+    .panel-body{padding:10px}
+    .video-grid{grid-template-columns:1fr}
+    .capture{grid-template-columns:1fr}
+    .grid2,.meta-grid,.ai-score,.config-grid,.quality-grid,.capability-grid{grid-template-columns:1fr}
+    .speaker-row{grid-template-columns:1fr}
+    .brand small{display:none}
+    .btn{width:100%}
+    .top-actions .btn,.top-actions .status-pill{width:auto}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">M</div>
+      <div>
+        <h1>会议助手</h1>
+        <small>会前准备 · 实时纪要 · 会后跟进</small>
+      </div>
+    </div>
+    <div class="meeting-name">
+      <input id="meetingTitle" value="产品周会：轻量级会议助手评审">
+    </div>
+    <div class="top-actions">
+      <div id="recordStatus" class="status-pill"><i class="status-dot"></i><span>待开始</span></div>
+      <button id="resetDemo" class="btn subtle" type="button">重置示例</button>
+      <button id="exportMd" class="btn primary" type="button">导出纪要</button>
+    </div>
+  </header>
+
+  <main class="workspace">
+    <aside class="rail">
+      <section class="panel">
+        <div class="panel-head">
+          <div class="panel-title"><span></span>会前准备</div>
+          <button id="addAgenda" class="icon-btn" type="button" title="新增议题">+</button>
+        </div>
+        <div class="panel-body stack">
+          <div class="grid2">
+            <div class="field">
+              <label for="meetingDate">日期</label>
+              <input id="meetingDate" type="date">
+            </div>
+            <div class="field">
+              <label for="meetingRoom">会议号/房间</label>
+              <input id="meetingRoom" value="VC-2048">
+            </div>
+          </div>
+          <div class="field">
+            <label for="participantInput">参会人</label>
+            <div class="row">
+              <input id="participantInput" placeholder="姓名">
+              <button id="addParticipant" class="btn" type="button">添加</button>
+            </div>
+          </div>
+          <div id="participantChips" class="speaker-chips"></div>
+          <div class="field">
+            <label>议题</label>
+            <div id="agendaList" class="list"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div class="panel-title"><span class="teal"></span>待办事项</div>
+          <button id="addTodo" class="icon-btn" type="button" title="新增待办">+</button>
+        </div>
+        <div class="panel-body">
+          <div id="todoList" class="list"></div>
+        </div>
+      </section>
+    </aside>
+
+    <section class="stage">
+      <section class="panel video-panel">
+        <div id="videoGrid" class="video-grid"></div>
+        <div class="call-controls">
+          <div id="liveCaption" class="caption">实时转写会显示在这里</div>
+          <div class="row">
+            <button id="cameraBtn" class="btn" type="button">音视频</button>
+            <button id="startVoice" class="btn primary" type="button">开始语音</button>
+            <button id="stopVoice" class="btn danger hidden" type="button">停止语音</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div class="panel-title"><span class="violet"></span>低延迟链路</div>
+          <div class="panel-actions">
+            <button id="initRtc" class="btn subtle" type="button">初始化 WebRTC</button>
+            <button id="connectAi" class="btn subtle" type="button">连接 AI 流</button>
+            <button id="runCheck" class="btn" type="button">运行自检</button>
+          </div>
+        </div>
+        <div class="panel-body runtime-grid">
+          <div class="runtime-card">
+            <h3>生产接口配置</h3>
+            <div class="config-grid">
+              <div class="field">
+                <label for="signalingUrl">WebRTC 信令/SFU</label>
+                <input id="signalingUrl" placeholder="wss://sfu.example.com/room/demo">
+              </div>
+              <div class="field">
+                <label for="asrUrl">实时 ASR WebSocket</label>
+                <input id="asrUrl" placeholder="wss://asr.example.com/realtime">
+              </div>
+              <div class="field">
+                <label for="llmUrl">流式推理 WebSocket</label>
+                <input id="llmUrl" placeholder="wss://llm.example.com/minutes">
+              </div>
+              <div class="field">
+                <label for="diarizationUrl">发言人分离接口</label>
+                <input id="diarizationUrl" placeholder="https://ai.example.com/diarize">
+              </div>
+            </div>
+            <div class="field">
+              <label for="hotwords">专有名词/热词</label>
+              <input id="hotwords" value="WebRTC,SFU,ASR,Speaker Diarization,会议助手,声纹分离,低延迟">
+            </div>
+            <div class="quality-grid">
+              <div class="quality-card"><strong id="avLatency">--</strong><span>音视频延迟目标 &lt;500ms</span></div>
+              <div class="quality-card"><strong id="asrPartialLatency">--</strong><span>ASR partial 目标 &lt;500ms</span></div>
+              <div class="quality-card"><strong id="asrFinalLatency">--</strong><span>ASR final 目标 &lt;1.5s</span></div>
+              <div class="quality-card"><strong id="aiLatency">--</strong><span>AI 增量纪要目标 &lt;2s</span></div>
+            </div>
+          </div>
+          <div class="runtime-card">
+            <h3>能力状态</h3>
+            <div class="capability-grid">
+              <div id="capWebrtc" class="capability"><span>WebRTC</span><i></i></div>
+              <div id="capNetwork" class="capability"><span>弱网自适应</span><i></i></div>
+              <div id="capEcho" class="capability"><span>回声消除</span><i></i></div>
+              <div id="capNoise" class="capability"><span>降噪</span><i></i></div>
+              <div id="capMulti" class="capability"><span>多人并发</span><i></i></div>
+              <div id="capAsr" class="capability"><span>实时 ASR</span><i></i></div>
+              <div id="capMixed" class="capability"><span>中英混说</span><i></i></div>
+              <div id="capHotword" class="capability"><span>专有名词</span><i></i></div>
+              <div id="capDiarization" class="capability"><span>发言人分离</span><i></i></div>
+              <div id="capStreamingLlm" class="capability"><span>流式推理</span><i></i></div>
+            </div>
+            <div id="networkProfile" class="stream-preview">尚未初始化链路。未配置服务端时，页面会使用本地 WebRTC 回环和浏览器语音识别做低延迟烟测。</div>
+            <div id="aiStreamPreview" class="stream-preview">AI 流式纪要等待连接。</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div class="panel-title"><span class="orange"></span>AI 记录台</div>
+          <div class="panel-actions">
+            <button id="demoLine" class="btn subtle" type="button">模拟一句</button>
+            <button id="clearTranscript" class="btn subtle" type="button">清空记录</button>
+          </div>
+        </div>
+        <div class="panel-body capture">
+          <div class="capture-left">
+            <div class="speaker-row">
+              <select id="currentSpeaker"></select>
+              <button id="confirmSpeaker" class="btn" type="button">确认发言人</button>
+            </div>
+            <textarea id="manualText" placeholder="输入或粘贴会议转写内容"></textarea>
+            <div class="capture-actions">
+              <button id="recordManual" class="btn success" type="button">记录到纪要</button>
+              <button id="recordNoise" class="btn subtle" type="button">标记为无关</button>
+              <button id="extractTodo" class="btn" type="button">提取待办</button>
+            </div>
+          </div>
+          <div class="capture-right">
+            <div class="ai-score">
+              <div class="metric"><strong id="metricKey">0</strong><span>重点</span></div>
+              <div class="metric"><strong id="metricTodo">0</strong><span>待办</span></div>
+              <div class="metric"><strong id="metricIgnored">0</strong><span>已过滤</span></div>
+            </div>
+            <div class="field">
+              <label for="topicGuard">主题关键词</label>
+              <input id="topicGuard" value="会议助手,语音识别,发言人,纪要,待办,导出,产品">
+            </div>
+            <div class="speaker-chips" id="topicTags"></div>
+          </div>
+        </div>
+      </section>
+    </section>
+
+    <aside class="side">
+      <section class="panel" style="flex:0 0 196px">
+        <div class="panel-head">
+          <div class="panel-title"><span class="violet"></span>侧栏跟进</div>
+          <div class="chip blue" id="meetingTimer">00:00</div>
+        </div>
+        <div class="panel-body">
+          <div id="agendaProgress" class="agenda-progress"></div>
+        </div>
+      </section>
+
+      <section class="panel" style="flex:0 0 218px">
+        <div class="panel-head">
+          <div class="panel-title"><span class="teal"></span>待办状态</div>
+        </div>
+        <div class="panel-body">
+          <div id="todoTracker" class="list"></div>
+        </div>
+      </section>
+
+      <section class="panel" style="flex:1 1 auto">
+        <div class="panel-head">
+          <div class="panel-title"><span></span>实时记录</div>
+          <div class="chip" id="segmentCount">0 条</div>
+        </div>
+        <div class="panel-body">
+          <div id="transcriptStream" class="stream"></div>
+        </div>
+      </section>
+
+      <section class="panel" style="flex:1 1 auto">
+        <div class="panel-head">
+          <div class="panel-title"><span class="orange"></span>会议纪要</div>
+          <button id="copyMinutes" class="btn subtle" type="button">复制</button>
+        </div>
+        <div class="panel-body">
+          <div id="minutesView" class="minutes"></div>
+        </div>
+      </section>
+    </aside>
+  </main>
+</div>
+<div id="toast" class="toast"></div>
+
+<script>
+(() => {
+  const $ = (selector) => document.querySelector(selector);
+  const uid = () => Math.random().toString(36).slice(2, 10);
+  const nowTime = () => new Date().toLocaleTimeString("zh-CN", { hour12:false, hour:"2-digit", minute:"2-digit", second:"2-digit" });
+  const today = new Date().toISOString().slice(0, 10);
+
+  const actionWords = ["负责","跟进","完成","提交","输出","同步","确认","下周","明天","今天","周五","周三","截止","待办","安排","对齐","推进","拉齐","补充","发给"];
+  const decisionWords = ["决定","确认","统一","结论","通过","采用","不采用","优先","定为","方案","同意","先做","暂缓"];
+  const riskWords = ["风险","阻塞","延期","依赖","问题","缺口","不确定","冲突","失败","超时","权限","成本","影响"];
+  const oppositionWords = ["反对","不同意","不建议","先别","别上线","不要","不能","不行","暂停","暂缓","先不","不同步","不通过"];
+  const pendingWords = ["待确认","等","等待","需要确认","法务确认","审批","评审","确认后","看完再","定下来"];
+  const blockingWords = ["阻塞","卡住","先别","别上线","不能上线","暂停上线","等法务","合规","审批后","确认后再","不通过"];
+  const orgOwners = ["法务","合规","安全","后端","前端","测试","产品","运营","设计","架构","财务","商务","数据","客服","研发","运维"];
+  const noiseWords = ["太卡","网络卡","听不清","麦克风","午饭","咖啡","空调","好冷","好热","吐槽","抱怨","离题","闲聊","天气","哈哈","辛苦了"];
+
+  const seed = {
+    participants:["林悦","周航","陈岚","王宁"],
+    agendas:[
+      { id:uid(), title:"确认会议助手的核心使用场景", owner:"林悦", minutes:8, done:false },
+      { id:uid(), title:"评审实时语音纪要与发言人确认流程", owner:"周航", minutes:12, done:false },
+      { id:uid(), title:"梳理会后待办导出与同步方式", owner:"陈岚", minutes:10, done:false }
+    ],
+    todos:[
+      { id:uid(), title:"补充真实声纹分离方案调研", owner:"周航", due:"周五", status:"进行中" },
+      { id:uid(), title:"整理会后纪要导出字段", owner:"陈岚", due:"今天", status:"待确认" }
+    ],
+    segments:[]
+  };
+
+  let state = loadState();
+  let recognition = null;
+  let recording = false;
+  let meetingStart = null;
+  let timerId = null;
+  let cameraStream = null;
+  let rtcPeer = null;
+  let rtcLoopbackPeer = null;
+  let rtcDataChannel = null;
+  let rtcStatsTimer = null;
+  let signalingSocket = null;
+  let asrSocket = null;
+  let llmSocket = null;
+  let mediaRecorder = null;
+  let asrChunkStartedAt = 0;
+  let aiRequestStartedAt = 0;
+  let networkProfile = "idle";
+  let demoIndex = 0;
+
+  const demoLines = [
+    "我建议先把会前议题、待办和参会人维护好，进入会议后侧栏按议题自动跟进。",
+    "这个方案可以确认，第一版先采用浏览器语音识别，真实发言人分离作为后续接入能力。",
+    "周航负责在周五前补充声纹分离和企业会议软件的接口调研。",
+    "刚才网络有点卡，空调也有点冷。",
+    "风险是浏览器语音识别无法天然区分发言人，所以需要当前发言人确认和会后校对入口。",
+    "陈岚今天输出纪要导出字段，包含议题、决策、待办、风险和被过滤内容统计。"
+  ];
+
+  function loadState(){
+    try{
+      const saved = localStorage.getItem("meeting-assistant-state");
+      if(saved){
+        const parsed = JSON.parse(saved);
+        return {
+          participants: parsed.participants?.length ? parsed.participants : seed.participants,
+          agendas: parsed.agendas?.length ? parsed.agendas : seed.agendas,
+          todos: parsed.todos?.length ? parsed.todos : seed.todos,
+          segments: parsed.segments || []
+        };
+      }
+    }catch(error){
+      console.warn(error);
+    }
+    return structuredClone(seed);
+  }
+
+  function saveState(){
+    localStorage.setItem("meeting-assistant-state", JSON.stringify(state));
+  }
+
+  function toast(message){
+    const node = $("#toast");
+    node.textContent = message;
+    node.classList.add("show");
+    clearTimeout(node._timer);
+    node._timer = setTimeout(() => node.classList.remove("show"), 2200);
+  }
+
+  function getRuntimeConfig(){
+    return {
+      signalingUrl: $("#signalingUrl")?.value.trim() || "",
+      asrUrl: $("#asrUrl")?.value.trim() || "",
+      llmUrl: $("#llmUrl")?.value.trim() || "",
+      diarizationUrl: $("#diarizationUrl")?.value.trim() || "",
+      hotwords: ($("#hotwords")?.value || "")
+        .split(/[,，、\s]+/)
+        .map(item => item.trim())
+        .filter(Boolean)
+    };
+  }
+
+  function persistRuntimeConfig(){
+    localStorage.setItem("meeting-assistant-runtime", JSON.stringify(getRuntimeConfig()));
+  }
+
+  function restoreRuntimeConfig(){
+    try{
+      const saved = JSON.parse(localStorage.getItem("meeting-assistant-runtime") || "{}");
+      if(saved.signalingUrl) $("#signalingUrl").value = saved.signalingUrl;
+      if(saved.asrUrl) $("#asrUrl").value = saved.asrUrl;
+      if(saved.llmUrl) $("#llmUrl").value = saved.llmUrl;
+      if(saved.diarizationUrl) $("#diarizationUrl").value = saved.diarizationUrl;
+      if(saved.hotwords?.length) $("#hotwords").value = saved.hotwords.join(",");
+    }catch(error){
+      console.warn(error);
+    }
+  }
+
+  function setCapability(id, level, text){
+    const node = $(id);
+    if(!node) return;
+    node.classList.remove("pass","warn","fail");
+    node.classList.add(level);
+    const label = node.querySelector("span");
+    if(label) label.textContent = text;
+  }
+
+  function setMetric(id, value, pass){
+    const node = $(id);
+    if(!node) return;
+    node.textContent = value;
+    node.style.color = pass == null ? "var(--ink)" : pass ? "var(--green)" : "var(--orange)";
+  }
+
+  function getMediaConstraints(){
+    return {
+      audio:{
+        echoCancellation:true,
+        noiseSuppression:true,
+        autoGainControl:true,
+        channelCount:1,
+        sampleRate:48000,
+        sampleSize:16
+      },
+      video:{
+        width:{ ideal:1280, max:1280 },
+        height:{ ideal:720, max:720 },
+        frameRate:{ ideal:24, max:30 }
+      }
+    };
+  }
+
+  async function ensureMediaStream(){
+    const hasAudio = cameraStream?.getAudioTracks().some(track => track.readyState === "live");
+    const hasVideo = cameraStream?.getVideoTracks().some(track => track.readyState === "live");
+    if(cameraStream && hasAudio && hasVideo) return cameraStream;
+    if(cameraStream){
+      cameraStream.getTracks().forEach(track => track.stop());
+    }
+    cameraStream = await navigator.mediaDevices.getUserMedia(getMediaConstraints());
+    updateAudioCapabilities();
+    renderVideoTiles();
+    return cameraStream;
+  }
+
+  function updateAudioCapabilities(){
+    const supported = navigator.mediaDevices?.getSupportedConstraints?.() || {};
+    const settings = cameraStream?.getAudioTracks?.()[0]?.getSettings?.() || {};
+    setCapability("#capEcho", supported.echoCancellation ? "pass" : "warn", `回声消除 ${settings.echoCancellation === false ? "未确认" : "已请求"}`);
+    setCapability("#capNoise", supported.noiseSuppression ? "pass" : "warn", `降噪 ${settings.noiseSuppression === false ? "未确认" : "已请求"}`);
+  }
+
+  function createPeerConnection(){
+    const pc = new RTCPeerConnection({
+      iceServers:[
+        { urls:"stun:stun.l.google.com:19302" },
+        { urls:"stun:stun.cloudflare.com:3478" }
+      ],
+      bundlePolicy:"max-bundle",
+      rtcpMuxPolicy:"require"
+    });
+    pc.onconnectionstatechange = () => {
+      const stateText = pc.connectionState || pc.iceConnectionState;
+      const ok = ["connected","completed"].includes(stateText);
+      setCapability("#capWebrtc", ok ? "pass" : "warn", `WebRTC ${stateText}`);
+      $("#networkProfile").textContent = `WebRTC 状态：${stateText}。弱网策略：${networkProfile}`;
+    };
+    pc.oniceconnectionstatechange = () => {
+      $("#networkProfile").textContent = `ICE 状态：${pc.iceConnectionState}。弱网策略：${networkProfile}`;
+    };
+    return pc;
+  }
+
+  async function initializeRtc(){
+    if(!window.RTCPeerConnection){
+      setCapability("#capWebrtc","fail","WebRTC 不支持");
+      toast("当前浏览器不支持 WebRTC");
+      return;
+    }
+    persistRuntimeConfig();
+    stopRtc(false);
+    const stream = await ensureMediaStream();
+    rtcPeer = createPeerConnection();
+    stream.getTracks().forEach(track => rtcPeer.addTrack(track, stream));
+    rtcDataChannel = rtcPeer.createDataChannel("assistant-control", { ordered:false, maxRetransmits:0 });
+    rtcDataChannel.onopen = () => setCapability("#capNetwork","pass","弱网自适应 已启用");
+
+    await applyNetworkProfile("good");
+    const { signalingUrl } = getRuntimeConfig();
+    if(signalingUrl){
+      await connectSignalingRtc(signalingUrl);
+      setCapability("#capMulti","pass","多人并发 SFU 模式");
+    }else{
+      await createLocalRtcLoopback();
+      setCapability("#capMulti","warn","多人并发 需配置 SFU");
+    }
+    startRtcStats();
+    runCapabilityCheck(false);
+    toast("WebRTC 链路已初始化");
+  }
+
+  async function createLocalRtcLoopback(){
+    rtcLoopbackPeer = createPeerConnection();
+    rtcPeer.onicecandidate = event => event.candidate && rtcLoopbackPeer.addIceCandidate(event.candidate);
+    rtcLoopbackPeer.onicecandidate = event => event.candidate && rtcPeer.addIceCandidate(event.candidate);
+    rtcLoopbackPeer.ondatachannel = event => {
+      event.channel.onmessage = message => console.debug("loopback data", message.data);
+    };
+    rtcLoopbackPeer.ontrack = () => {};
+    const offer = await rtcPeer.createOffer({ offerToReceiveAudio:true, offerToReceiveVideo:true });
+    await rtcPeer.setLocalDescription(offer);
+    await rtcLoopbackPeer.setRemoteDescription(offer);
+    const answer = await rtcLoopbackPeer.createAnswer();
+    await rtcLoopbackPeer.setLocalDescription(answer);
+    await rtcPeer.setRemoteDescription(answer);
+  }
+
+  async function connectSignalingRtc(url){
+    signalingSocket = new WebSocket(url);
+    signalingSocket.onopen = async () => {
+      signalingSocket.send(JSON.stringify({ type:"join", room:$("#meetingRoom").value, role:"publisher" }));
+      const offer = await rtcPeer.createOffer({ offerToReceiveAudio:true, offerToReceiveVideo:true });
+      await rtcPeer.setLocalDescription(offer);
+      signalingSocket.send(JSON.stringify({ type:"offer", sdp:rtcPeer.localDescription }));
+    };
+    signalingSocket.onmessage = async event => {
+      const message = JSON.parse(event.data);
+      if(message.type === "answer") await rtcPeer.setRemoteDescription(message.sdp);
+      if(message.type === "offer"){
+        await rtcPeer.setRemoteDescription(message.sdp);
+        const answer = await rtcPeer.createAnswer();
+        await rtcPeer.setLocalDescription(answer);
+        signalingSocket.send(JSON.stringify({ type:"answer", sdp:rtcPeer.localDescription }));
+      }
+      if(message.type === "candidate" && message.candidate){
+        await rtcPeer.addIceCandidate(message.candidate);
+      }
+    };
+    rtcPeer.onicecandidate = event => {
+      if(event.candidate && signalingSocket?.readyState === WebSocket.OPEN){
+        signalingSocket.send(JSON.stringify({ type:"candidate", candidate:event.candidate }));
+      }
+    };
+  }
+
+  function stopRtc(clearMedia = true){
+    clearInterval(rtcStatsTimer);
+    rtcStatsTimer = null;
+    [signalingSocket].forEach(socket => {
+      try{ socket?.close?.(); }catch(error){}
+    });
+    signalingSocket = null;
+    [rtcPeer, rtcLoopbackPeer].forEach(peer => {
+      if(clearMedia){
+        try{ peer?.getSenders?.().forEach(sender => sender.track?.stop?.()); }catch(error){}
+      }
+      try{ peer?.close?.(); }catch(error){}
+    });
+    rtcPeer = null;
+    rtcLoopbackPeer = null;
+    if(clearMedia && cameraStream){
+      cameraStream.getTracks().forEach(track => track.stop());
+      cameraStream = null;
+    }
+  }
+
+  async function applyNetworkProfile(profile){
+    networkProfile = profile;
+    const table = {
+      good:{ maxBitrate:1500000, maxFramerate:24, scaleResolutionDownBy:1 },
+      constrained:{ maxBitrate:650000, maxFramerate:18, scaleResolutionDownBy:1.5 },
+      poor:{ maxBitrate:260000, maxFramerate:12, scaleResolutionDownBy:2.5 }
+    };
+    const target = table[profile] || table.good;
+    const sender = rtcPeer?.getSenders?.().find(item => item.track?.kind === "video");
+    if(sender?.setParameters){
+      const params = sender.getParameters();
+      params.degradationPreference = "maintain-framerate";
+      params.encodings = params.encodings?.length ? params.encodings : [{}];
+      params.encodings[0] = { ...params.encodings[0], ...target };
+      await sender.setParameters(params);
+      setCapability("#capNetwork","pass",`弱网自适应 ${profile}`);
+    }
+    $("#networkProfile").textContent = `弱网策略：${profile}，上行 ${Math.round(target.maxBitrate / 1000)}kbps，${target.maxFramerate}fps。`;
+  }
+
+  function startRtcStats(){
+    clearInterval(rtcStatsTimer);
+    rtcStatsTimer = setInterval(updateRtcStats, 1200);
+    updateRtcStats();
+  }
+
+  async function updateRtcStats(){
+    if(!rtcPeer) return;
+    const report = await rtcPeer.getStats();
+    let rtt = 0;
+    let lost = 0;
+    let available = 0;
+    report.forEach(stat => {
+      if(stat.type === "candidate-pair" && stat.state === "succeeded"){
+        rtt = stat.currentRoundTripTime || rtt;
+        available = stat.availableOutgoingBitrate || available;
+      }
+      if(stat.type === "remote-inbound-rtp" && stat.kind === "video"){
+        rtt = stat.roundTripTime || rtt;
+        lost = stat.fractionLost || lost;
+      }
+    });
+    const latencyMs = rtt ? Math.round(rtt * 1000) : rtcLoopbackPeer ? 80 : 0;
+    setMetric("#avLatency", latencyMs ? `${latencyMs}ms` : "--", latencyMs ? latencyMs < 500 : null);
+    if(rtt > .8 || lost > .08 || (available && available < 350000)) await applyNetworkProfile("poor");
+    else if(rtt > .35 || lost > .03 || (available && available < 800000)) await applyNetworkProfile("constrained");
+    else if(networkProfile !== "good") await applyNetworkProfile("good");
+  }
+
+  function connectAiStreams(){
+    persistRuntimeConfig();
+    const { llmUrl, asrUrl, diarizationUrl, hotwords } = getRuntimeConfig();
+    if(llmUrl){
+      connectLlmStream(llmUrl);
+    }else{
+      setCapability("#capStreamingLlm","warn","流式推理 待配置");
+    }
+    setCapability("#capAsr", asrUrl ? "warn" : "warn", asrUrl ? "实时 ASR 待启动" : "实时 ASR 浏览器兜底");
+    setCapability("#capMixed", asrUrl ? "pass" : "warn", asrUrl ? "中英混说 ASR 服务" : "中英混说 需 ASR 服务");
+    setCapability("#capHotword", hotwords.length ? "pass" : "warn", hotwords.length ? `专有名词 ${hotwords.length} 个` : "专有名词 未配置");
+    setCapability("#capDiarization", diarizationUrl ? "pass" : "warn", diarizationUrl ? "发言人分离 服务端" : "发言人分离 手动兜底");
+    $("#aiStreamPreview").textContent = "AI 流配置已读取。点击“开始语音”后，ASR 会优先走 WebSocket；无地址时使用浏览器语音识别。";
+  }
+
+  function connectLlmStream(url){
+    try{
+      llmSocket?.close?.();
+      llmSocket = new WebSocket(url);
+      llmSocket.onopen = () => {
+        setCapability("#capStreamingLlm","pass","流式推理 已连接");
+        $("#aiStreamPreview").textContent = "流式推理已连接，后续重点发言会增量送入纪要模型。";
+      };
+      llmSocket.onmessage = event => {
+        const latency = aiRequestStartedAt ? Date.now() - aiRequestStartedAt : 0;
+        setMetric("#aiLatency", latency ? `${latency}ms` : "--", latency ? latency < 2000 : null);
+        let payload = event.data;
+        try{ payload = JSON.parse(event.data); }catch(error){}
+        const text = payload.delta || payload.text || payload.summary || String(payload);
+        $("#aiStreamPreview").textContent = text;
+        if(payload.todo){
+          state.todos.unshift({ id:uid(), title:payload.todo.title, owner:payload.todo.owner || "未确认", due:payload.todo.due || "待定", status:"待确认" });
+          render();
+        }
+      };
+      llmSocket.onerror = () => setCapability("#capStreamingLlm","fail","流式推理 连接失败");
+      llmSocket.onclose = () => setCapability("#capStreamingLlm","warn","流式推理 未连接");
+    }catch(error){
+      setCapability("#capStreamingLlm","fail","流式推理 连接失败");
+    }
+  }
+
+  function sendSegmentToLlm(segment){
+    if(!segment.important) return;
+    if(llmSocket?.readyState !== WebSocket.OPEN){
+      $("#aiStreamPreview").textContent = `本地规则纪要：${segment.speaker} 提到${labelForType(segment.type)}，已写入右侧纪要。`;
+      return;
+    }
+    aiRequestStartedAt = Date.now();
+    llmSocket.send(JSON.stringify({
+      type:"meeting_segment",
+      targetLatencyMs:2000,
+      languageHints:["zh-CN","en-US"],
+      hotwords:getRuntimeConfig().hotwords,
+      segment,
+      agendas:state.agendas,
+      todos:state.todos
+    }));
+  }
+
+  async function refineSpeakerWithDiarization(segment){
+    const { diarizationUrl } = getRuntimeConfig();
+    if(!diarizationUrl) return;
+    try{
+      const response = await fetch(diarizationUrl, {
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body:JSON.stringify({
+          text:segment.text,
+          speakerHint:segment.speaker,
+          participants:state.participants,
+          hotwords:getRuntimeConfig().hotwords,
+          targetLatencyMs:1500
+        })
+      });
+      if(!response.ok) throw new Error("diarization failed");
+      const data = await response.json();
+      const current = state.segments.find(item => item.id === segment.id);
+      if(current && data.speaker){
+        current.speaker = data.speaker;
+        if(current.semantic){
+          if(current.semantic.decisionMaker) current.semantic.decisionMaker = data.speaker;
+          if(current.semantic.opposer) current.semantic.opposer = data.speaker;
+        }
+        current.reason = `${current.reason}；发言人置信度 ${Math.round((data.confidence || 0) * 100)}%`;
+        saveState();
+        render();
+      }
+    }catch(error){
+      setCapability("#capDiarization","fail","发言人分离 调用失败");
+    }
+  }
+
+  function runCapabilityCheck(showToast = true){
+    const config = getRuntimeConfig();
+    setCapability("#capWebrtc", window.RTCPeerConnection ? (rtcPeer ? "pass" : "warn") : "fail", window.RTCPeerConnection ? (rtcPeer ? "WebRTC 已初始化" : "WebRTC 支持") : "WebRTC 不支持");
+    setCapability("#capNetwork", rtcPeer ? "pass" : "warn", rtcPeer ? `弱网自适应 ${networkProfile}` : "弱网自适应 待初始化");
+    updateAudioCapabilities();
+    setCapability("#capMulti", config.signalingUrl ? "pass" : "warn", config.signalingUrl ? "多人并发 SFU 可接入" : "多人并发 需 SFU");
+    setCapability("#capAsr", config.asrUrl ? (asrSocket?.readyState === WebSocket.OPEN ? "pass" : "warn") : "warn", config.asrUrl ? "实时 ASR WebSocket" : "实时 ASR 浏览器兜底");
+    setCapability("#capMixed", config.asrUrl ? "pass" : "warn", config.asrUrl ? "中英混说 服务支持" : "中英混说 需服务支持");
+    setCapability("#capHotword", config.hotwords.length ? "pass" : "warn", config.hotwords.length ? `专有名词 ${config.hotwords.length} 个` : "专有名词 未配置");
+    setCapability("#capDiarization", config.diarizationUrl ? "pass" : "warn", config.diarizationUrl ? "发言人分离 可调用" : "发言人分离 手动兜底");
+    setCapability("#capStreamingLlm", llmSocket?.readyState === WebSocket.OPEN ? "pass" : "warn", llmSocket?.readyState === WebSocket.OPEN ? "流式推理 已连接" : "流式推理 待连接");
+    if(showToast) toast("低延迟能力自检已完成");
+  }
+
+  function escapeHtml(value){
+    return String(value)
+      .replace(/&/g,"&amp;")
+      .replace(/</g,"&lt;")
+      .replace(/>/g,"&gt;")
+      .replace(/"/g,"&quot;");
+  }
+
+  function getTopicWords(){
+    return $("#topicGuard").value
+      .split(/[,，、\s]+/)
+      .map(item => item.trim())
+      .filter(Boolean);
+  }
+
+  function normalizeSpeakerText(text, fallbackSpeaker){
+    const match = text.match(/^(.{1,8})[：:]\s*(.+)$/);
+    if(match){
+      const possible = match[1].trim();
+      const body = match[2].trim();
+      if(possible && body){
+        if(!state.participants.includes(possible)){
+          state.participants.push(possible);
+        }
+        return { speaker:possible, text:body };
+      }
+    }
+    return { speaker:fallbackSpeaker || state.participants[0] || "未确认", text:text.trim() };
+  }
+
+  function classify(text, forcedType){
+    const topicWords = getTopicWords();
+    const hit = (words) => words.some(word => text.includes(word));
+    const hasTopic = topicWords.length === 0 || topicWords.some(word => text.includes(word));
+    const hasBlock = hit(blockingWords);
+    const hasPending = hit(pendingWords);
+    const hasOpposition = hit(oppositionWords);
+    const hasAction = hit(actionWords) || /(.+)(负责|完成|提交|输出|同步|确认)/.test(text);
+    const hasDecision = decisionWords.filter(word => word !== "确认").some(word => text.includes(word))
+      || /(可以确认|确认(方案|结论|范围|版本|目标|不上线|上线|暂缓|优先级)|最终确认|会议确认)/.test(text);
+    const hasRisk = hit(riskWords);
+    const hasNumberOrDate = /(\d+|一版|二版|今天|明天|周[一二三四五六日天]|月底|下周|本周)/.test(text);
+    const isComplaint = hit(noiseWords);
+    const isShortNoise = text.length < 18 && isComplaint && !hasAction && !hasDecision && !hasRisk;
+
+    if(forcedType === "noise") return { type:"noise", important:false, reason:"手动标记为无关" };
+    if(hasBlock) return { type:"block", important:true, reason:"包含阻塞、暂停或上线拦截条件" };
+    if(hasOpposition) return { type:"opposition", important:true, reason:"包含反对或暂缓意见" };
+    if(hasPending) return { type:"pending", important:true, reason:"包含待确认或审批依赖" };
+    if(hasDecision) return { type:"decision", important:true, reason:"包含决策或结论" };
+    if(hasAction) return { type:"action", important:true, reason:"包含负责人、时间或动作" };
+    if(hasRisk) return { type:"risk", important:true, reason:"包含风险或阻塞" };
+    if(isShortNoise || (!hasTopic && isComplaint)) return { type:"noise", important:false, reason:"偏离主题或抱怨" };
+    if(hasTopic || hasNumberOrDate) return { type:"key", important:true, reason:"命中议题或关键事实" };
+    return { type:"noise", important:false, reason:"未命中主题关键词" };
+  }
+
+  function getAgendaTitle(agendaId){
+    return state.agendas.find(item => item.id === agendaId)?.title || "未匹配议题";
+  }
+
+  function getCurrentAgendaId(text){
+    return matchAgenda(text)
+      || state.segments.find(seg => seg.agendaId && seg.important)?.agendaId
+      || state.agendas.find(agenda => !agenda.done)?.id
+      || state.agendas[0]?.id
+      || null;
+  }
+
+  function extractOwner(text, speaker){
+    const participant = state.participants.find(name => text.includes(name));
+    if(participant) return participant;
+    const org = orgOwners.find(name => text.includes(name));
+    if(org) return org;
+    const pendingOwner = text.match(/(?:等|待|由|请|让|需要|麻烦)([\u4e00-\u9fa5A-Za-z0-9_（）()·]{2,12}?)(?:确认|审批|评审|跟进|负责|处理|补充|输出|提交|上线|排查|同步)/);
+    if(pendingOwner) return pendingOwner[1].replace(/先|再|后|来/g,"").trim() || speaker;
+    const actionOwner = text.match(/([\u4e00-\u9fa5A-Za-z0-9_（）()·]{2,12}?)(?:负责|来跟进|来处理|输出|提交|确认|审批|评审)/);
+    if(actionOwner) return actionOwner[1].replace(/我们|这个|接口|方案|需要|等/g,"").trim() || speaker;
+    return speaker || "未确认";
+  }
+
+  function extractDue(text){
+    const match = text.match(/(今天|明天|本周|下周|周[一二三四五六日天]|月底|上线前|发布前|确认后|审批后|(\d{1,2})月(\d{1,2})日)/);
+    return match ? match[0] : "待定";
+  }
+
+  function inferPriority(text, type){
+    if(type === "block" || /上线|发布|生产|法务|合规|安全|事故|客户|付款|合同|数据泄露|不能|先别|暂停|阻塞/.test(text)) return "高";
+    if(type === "risk" || type === "pending" || /延期|依赖|成本|权限|超时/.test(text)) return "中";
+    return "普通";
+  }
+
+  function inferStatus(text, type){
+    if(type === "block" || type === "pending" || /待确认|等|审批|评审|确认后/.test(text)) return "待确认";
+    if(type === "opposition") return "待确认";
+    if(/已完成|完成了|已经/.test(text)) return "已完成";
+    return "进行中";
+  }
+
+  function inferSemantic(text, speaker, result, agendaId){
+    const type = result.type;
+    const owner = extractOwner(text, speaker);
+    const priority = inferPriority(text, type);
+    const status = inferStatus(text, type);
+    const agendaTitle = getAgendaTitle(agendaId);
+    const semantic = {
+      kind:type,
+      label:labelForType(type),
+      agendaId,
+      agendaTitle,
+      owner,
+      status,
+      priority,
+      decisionMaker:type === "decision" ? speaker : "",
+      opposer:type === "opposition" || type === "block" ? speaker : "",
+      due:extractDue(text),
+      confidence:result.important ? 0.82 : 0.42
+    };
+    if(type === "block"){
+      semantic.label = "阻塞事项";
+      semantic.status = "待确认";
+      semantic.priority = "高";
+      semantic.actionTitle = `阻塞解除：${text.replace(/[。.!！]$/,"").slice(0, 40)}`;
+    }else if(type === "pending"){
+      semantic.label = "待确认事项";
+      semantic.actionTitle = `确认：${text.replace(/[。.!！]$/,"").slice(0, 42)}`;
+    }else if(type === "opposition"){
+      semantic.label = "反对意见";
+      semantic.actionTitle = `处理反对意见：${text.replace(/[。.!！]$/,"").slice(0, 36)}`;
+    }else if(type === "action"){
+      semantic.label = "Action Item";
+      semantic.actionTitle = text.replace(/[。.!！]$/,"").slice(0, 42);
+    }else if(type === "risk"){
+      semantic.label = "风险";
+      semantic.actionTitle = `风险应对：${text.replace(/[。.!！]$/,"").slice(0, 40)}`;
+    }
+    return semantic;
+  }
+
+  function addSegment(rawText, forcedType){
+    const text = rawText.trim();
+    if(!text) return;
+    const selectedSpeaker = $("#currentSpeaker").value || state.participants[0] || "未确认";
+    const parsed = normalizeSpeakerText(text, selectedSpeaker);
+    const result = classify(parsed.text, forcedType);
+    const agendaId = getCurrentAgendaId(parsed.text);
+    const semantic = inferSemantic(parsed.text, parsed.speaker, result, agendaId);
+
+    const segment = {
+      id: uid(),
+      speaker: parsed.speaker,
+      text: parsed.text,
+      type: result.type,
+      important: result.important,
+      reason: result.reason,
+      agendaId,
+      semantic,
+      time: nowTime()
+    };
+    state.segments.unshift(segment);
+
+    if(["action","block","pending","opposition","risk"].includes(result.type)){
+      maybeCreateTodo(parsed.text, parsed.speaker, semantic, segment.id);
+    }
+
+    $("#manualText").value = "";
+    $("#liveCaption").textContent = `${parsed.speaker}: ${parsed.text}`;
+    saveState();
+    render();
+    refineSpeakerWithDiarization(segment);
+    sendSegmentToLlm(segment);
+  }
+
+  function matchAgenda(text){
+    let best = null;
+    let score = 0;
+    state.agendas.forEach(agenda => {
+      const words = agenda.title.split(/[，,、：:\s]+/).filter(word => word.length > 1);
+      const localScore = words.reduce((sum, word) => sum + (text.includes(word) ? 1 : 0), 0);
+      if(localScore > score){
+        score = localScore;
+        best = agenda.id;
+      }
+    });
+    return best;
+  }
+
+  function maybeCreateTodo(text, speaker, semantic = null, sourceSegmentId = ""){
+    const title = semantic?.actionTitle || text
+      .replace(/^(请|麻烦|需要|我们)/,"")
+      .replace(/(负责|跟进|完成|提交|输出|同步|确认|安排)/g, match => match)
+      .slice(0, 42);
+    const exists = state.todos.some(todo => text.includes(todo.title) || todo.title.includes(text.slice(0, 12)) || todo.title === title);
+    if(exists) return;
+    state.todos.unshift({
+      id: uid(),
+      title,
+      owner: semantic?.owner || extractOwner(text, speaker),
+      due: semantic?.due || extractDue(text),
+      status: semantic?.status || "待确认",
+      priority: semantic?.priority || inferPriority(text, "action"),
+      kind: semantic?.label || "Action Item",
+      sourceSegmentId
+    });
+  }
+
+  function extractTodoFromManual(){
+    const text = $("#manualText").value.trim();
+    if(!text) return toast("先输入一条转写内容");
+    const speaker = $("#currentSpeaker").value || state.participants[0] || "未确认";
+    maybeCreateTodo(text, speaker);
+    saveState();
+    render();
+    toast("已尝试提取待办");
+  }
+
+  function render(){
+    renderParticipants();
+    renderSpeakerSelect();
+    renderAgendas();
+    renderTodos();
+    renderVideoTiles();
+    renderProgress();
+    renderTranscript();
+    renderMinutes();
+    renderMetrics();
+    renderTopicTags();
+    saveState();
+  }
+
+  function renderParticipants(){
+    const chips = $("#participantChips");
+    chips.innerHTML = state.participants.map((name, index) => `
+      <button class="chip ${$("#currentSpeaker").value === name ? "active" : ""}" type="button" data-speaker="${escapeHtml(name)}">
+        ${escapeHtml(name)}${index > 0 ? `<span data-remove-speaker="${escapeHtml(name)}">×</span>` : ""}
+      </button>
+    `).join("");
+  }
+
+  function renderSpeakerSelect(){
+    const select = $("#currentSpeaker");
+    const previous = select.value || state.participants[0];
+    select.innerHTML = state.participants.map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join("");
+    select.value = state.participants.includes(previous) ? previous : state.participants[0];
+  }
+
+  function renderAgendas(){
+    $("#agendaList").innerHTML = state.agendas.map((agenda, index) => `
+      <div class="item" data-agenda="${agenda.id}">
+        <button class="check ${agenda.done ? "done" : ""}" type="button" data-toggle-agenda="${agenda.id}">✓</button>
+        <div class="item-main">
+          <input value="${escapeHtml(agenda.title)}" data-agenda-title="${agenda.id}">
+          <div class="meta-grid">
+            <select class="mini-select" data-agenda-owner="${agenda.id}">
+              ${state.participants.map(name => `<option ${agenda.owner === name ? "selected" : ""}>${escapeHtml(name)}</option>`).join("")}
+            </select>
+            <input class="mini-input" value="${escapeHtml(agenda.minutes)} 分钟" data-agenda-minutes="${agenda.id}">
+          </div>
+        </div>
+        <button class="icon-btn" type="button" data-remove-agenda="${agenda.id}" title="删除议题">×</button>
+      </div>
+    `).join("");
+  }
+
+  function renderTodos(){
+    const options = ["待确认","进行中","已完成","有阻塞"];
+    $("#todoList").innerHTML = state.todos.map(todo => `
+      <div class="item" data-todo="${todo.id}">
+        <button class="check ${todo.status === "已完成" ? "done" : ""}" type="button" data-complete-todo="${todo.id}">✓</button>
+        <div class="item-main">
+          <input value="${escapeHtml(todo.title)}" data-todo-title="${todo.id}">
+          <div class="meta-grid">
+            <select class="mini-select" data-todo-owner="${todo.id}">
+              ${state.participants.map(name => `<option ${todo.owner === name ? "selected" : ""}>${escapeHtml(name)}</option>`).join("")}
+            </select>
+            <input class="mini-input" value="${escapeHtml(todo.due)}" data-todo-due="${todo.id}">
+          </div>
+        </div>
+        <button class="icon-btn" type="button" data-remove-todo="${todo.id}" title="删除待办">×</button>
+      </div>
+    `).join("");
+
+    $("#todoTracker").innerHTML = state.todos.length ? state.todos.map(todo => `
+      <div class="todo-row">
+        <button class="check ${todo.status === "已完成" ? "done" : ""}" type="button" data-complete-todo="${todo.id}">✓</button>
+        <div class="todo-title">${escapeHtml(todo.title)}<span>${escapeHtml(todo.kind || "Action Item")} · ${escapeHtml(todo.owner)} · ${escapeHtml(todo.due)} · ${escapeHtml(todo.priority || "普通")}</span></div>
+        <select data-todo-status="${todo.id}">
+          ${options.map(option => `<option ${todo.status === option ? "selected" : ""}>${option}</option>`).join("")}
+        </select>
+      </div>
+    `).join("") : `<div class="empty">暂无待办</div>`;
+  }
+
+  function renderVideoTiles(){
+    const activeSpeaker = $("#currentSpeaker").value || state.participants[0];
+    const visible = state.participants.slice(0, 4);
+    while(visible.length < 4) visible.push("参会人" + (visible.length + 1));
+    $("#videoGrid").innerHTML = visible.map((name, index) => {
+      const initial = name.slice(0, 1).toUpperCase();
+      const isSelf = index === 0 && cameraStream;
+      return `
+        <div class="tile ${name === activeSpeaker ? "active" : ""}">
+          ${isSelf ? `<video id="selfVideo" autoplay muted playsinline></video>` : `<div class="avatar">${escapeHtml(initial)}</div>`}
+          <div class="tile-name"><i class="mic-dot"></i>${escapeHtml(name)}</div>
+        </div>
+      `;
+    }).join("");
+    if(cameraStream && $("#selfVideo")){
+      $("#selfVideo").srcObject = cameraStream;
+    }
+  }
+
+  function renderProgress(){
+    const importantSegments = state.segments.filter(seg => seg.important);
+    $("#agendaProgress").innerHTML = state.agendas.map(agenda => {
+      const hits = importantSegments.filter(seg => seg.agendaId === agenda.id).length;
+      const width = agenda.done ? 100 : Math.min(100, hits * 28);
+      return `
+        <div class="progress-row">
+          <div>
+            <strong>${escapeHtml(agenda.title)}</strong>
+            <div class="bar"><i style="width:${width}%"></i></div>
+          </div>
+          <button class="check ${agenda.done ? "done" : ""}" type="button" data-toggle-agenda="${agenda.id}">✓</button>
+        </div>
+      `;
+    }).join("");
+  }
+
+  function renderTranscript(){
+    $("#segmentCount").textContent = `${state.segments.length} 条`;
+    $("#transcriptStream").innerHTML = state.segments.length ? state.segments.map(seg => `
+      <article class="segment ${seg.type}">
+        <div class="seg-top">
+          <div class="seg-speaker">${escapeHtml(seg.speaker)} · ${labelForType(seg.type)}</div>
+          <div class="seg-time">${escapeHtml(seg.time)}</div>
+        </div>
+        <div class="seg-text">${escapeHtml(seg.text)}</div>
+        ${renderSemanticStrip(seg)}
+        <div class="seg-tools">
+          <select data-segment-speaker="${seg.id}">
+            ${state.participants.map(name => `<option ${seg.speaker === name ? "selected" : ""}>${escapeHtml(name)}</option>`).join("")}
+          </select>
+          <button class="icon-btn" type="button" data-remove-segment="${seg.id}" title="删除记录">×</button>
+        </div>
+      </article>
+    `).join("") : `<div class="empty">暂无会议记录</div>`;
+  }
+
+  function renderSemanticStrip(seg){
+    if(!seg.semantic || seg.type === "noise") return "";
+    const semantic = seg.semantic;
+    const level = semantic.priority === "高" ? "strong" : semantic.status === "待确认" ? "warn" : "info";
+    const chips = [
+      { text:`类型：${semantic.label || labelForType(seg.type)}`, cls:level },
+      { text:`议题：${semantic.agendaTitle || getAgendaTitle(seg.agendaId)}`, cls:"info" },
+      { text:`owner：${semantic.owner || "未确认"}`, cls:level },
+      { text:`状态：${semantic.status || "进行中"}`, cls:level },
+      { text:`优先级：${semantic.priority || "普通"}`, cls:level }
+    ];
+    if(semantic.decisionMaker) chips.push({ text:`决策者：${semantic.decisionMaker}`, cls:"info" });
+    if(semantic.opposer) chips.push({ text:`反对/阻塞提出：${semantic.opposer}`, cls:"warn" });
+    return `<div class="semantic-strip">${chips.map(chip => `<span class="semantic-pill ${chip.cls}">${escapeHtml(chip.text)}</span>`).join("")}</div>`;
+  }
+
+  function renderMinutes(){
+    const important = state.segments.filter(seg => seg.important).slice().reverse();
+    const decisions = important.filter(seg => seg.type === "decision");
+    const actions = important.filter(seg => seg.type === "action");
+    const risks = important.filter(seg => seg.type === "risk" || seg.type === "block");
+    const pending = important.filter(seg => seg.type === "pending" || seg.type === "block");
+    const opposition = important.filter(seg => seg.type === "opposition");
+    const keys = important.filter(seg => seg.type === "key");
+    const ignored = state.segments.filter(seg => seg.type === "noise");
+
+    $("#minutesView").innerHTML = [
+      minutesSection("重点摘要", keys.concat(decisions).map(formatSemanticLine)),
+      minutesSection("决策与反对", decisions.concat(opposition).map(formatSemanticLine)),
+      minutesSection("阻塞与待确认", pending.map(formatSemanticLine)),
+      minutesSection("风险与阻塞", risks.map(formatSemanticLine)),
+      minutesSection("Action Items", state.todos.map(formatTodoLine)),
+      minutesSection("过滤统计", ignored.map(seg => `${seg.speaker}：${seg.text}`))
+    ].join("");
+  }
+
+  function formatSemanticLine(seg){
+    const semantic = seg.semantic || inferSemantic(seg.text, seg.speaker, { type:seg.type, important:seg.important }, seg.agendaId);
+    const role = semantic.decisionMaker ? `｜决策者：${semantic.decisionMaker}` : semantic.opposer ? `｜反对/阻塞提出：${semantic.opposer}` : "";
+    return `${semantic.label || labelForType(seg.type)}｜议题：${semantic.agendaTitle || getAgendaTitle(seg.agendaId)}｜owner：${semantic.owner || "未确认"}｜状态：${semantic.status || "进行中"}｜优先级：${semantic.priority || "普通"}${role}｜原文：${seg.speaker}：${seg.text}`;
+  }
+
+  function formatTodoLine(todo){
+    return `${todo.title}｜类型：${todo.kind || "Action Item"}｜负责人：${todo.owner}｜截止：${todo.due}｜状态：${todo.status}｜优先级：${todo.priority || "普通"}`;
+  }
+
+  function minutesSection(title, items){
+    const body = items.length
+      ? `<ul>${items.map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`
+      : `<div class="empty">暂无内容</div>`;
+    return `<section class="minutes-section"><h3>${escapeHtml(title)}</h3>${body}</section>`;
+  }
+
+  function renderMetrics(){
+    $("#metricKey").textContent = state.segments.filter(seg => seg.important).length;
+    $("#metricTodo").textContent = state.todos.length;
+    $("#metricIgnored").textContent = state.segments.filter(seg => seg.type === "noise").length;
+  }
+
+  function renderTopicTags(){
+    $("#topicTags").innerHTML = getTopicWords().map(word => `<span class="chip teal">${escapeHtml(word)}</span>`).join("");
+  }
+
+  function labelForType(type){
+    return {
+      action:"待办",
+      decision:"决策",
+      risk:"风险",
+      block:"阻塞事项",
+      pending:"待确认事项",
+      opposition:"反对意见",
+      key:"重点",
+      noise:"已过滤"
+    }[type] || "记录";
+  }
+
+  function buildMinutesMarkdown(){
+    const title = $("#meetingTitle").value.trim() || "会议纪要";
+    const date = $("#meetingDate").value || today;
+    const room = $("#meetingRoom").value.trim() || "未填写";
+    const important = state.segments.filter(seg => seg.important).slice().reverse();
+    const ignored = state.segments.filter(seg => seg.type === "noise");
+    const decisions = important.filter(seg => seg.type === "decision");
+    const opposition = important.filter(seg => seg.type === "opposition");
+    const pending = important.filter(seg => seg.type === "pending" || seg.type === "block");
+    const risks = important.filter(seg => seg.type === "risk" || seg.type === "block");
+    const section = (name, lines) => `\n## ${name}\n${lines.length ? lines.map(line => `- ${line}`).join("\n") : "- 暂无"}\n`;
+
+    return `# ${title}
+
+- 日期：${date}
+- 会议号/房间：${room}
+- 参会人：${state.participants.join("、")}
+- 记录时间：${new Date().toLocaleString("zh-CN", { hour12:false })}
+
+${section("议题", state.agendas.map(agenda => `${agenda.done ? "[x]" : "[ ]"} ${agenda.title}｜负责人：${agenda.owner}｜预计：${agenda.minutes} 分钟`))}
+${section("重点摘要", important.filter(seg => seg.type === "key" || seg.type === "decision").map(formatSemanticLine))}
+${section("决策与反对", decisions.concat(opposition).map(formatSemanticLine))}
+${section("阻塞与待确认", pending.map(formatSemanticLine))}
+${section("风险与阻塞", risks.map(formatSemanticLine))}
+${section("Action Items", state.todos.map(formatTodoLine))}
+${section("完整有效记录", important.map(seg => `[${seg.time}] ${formatSemanticLine(seg)}`))}
+${section("已过滤内容", ignored.map(seg => `[${seg.time}] ${seg.speaker}：${seg.text}（${seg.reason}）`))}
+`;
+  }
+
+  function downloadMinutes(){
+    const title = ($("#meetingTitle").value.trim() || "会议纪要").replace(/[\\/:*?"<>|]/g, "_");
+    const blob = new Blob([buildMinutesMarkdown()], { type:"text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${title}_${$("#meetingDate").value || today}.md`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    toast("纪要文件已生成");
+  }
+
+  async function copyMinutes(){
+    try{
+      await navigator.clipboard.writeText(buildMinutesMarkdown());
+      toast("纪要已复制");
+    }catch(error){
+      toast("当前浏览器不允许复制，可直接导出文件");
+    }
+  }
+
+  function startTimer(){
+    if(meetingStart) return;
+    meetingStart = Date.now();
+    timerId = setInterval(() => {
+      const seconds = Math.floor((Date.now() - meetingStart) / 1000);
+      const mm = String(Math.floor(seconds / 60)).padStart(2,"0");
+      const ss = String(seconds % 60).padStart(2,"0");
+      $("#meetingTimer").textContent = `${mm}:${ss}`;
+    }, 1000);
+  }
+
+  async function startAsrStream(){
+    const { asrUrl, hotwords } = getRuntimeConfig();
+    if(!asrUrl) return false;
+    const stream = await ensureMediaStream();
+    const audioOnly = new MediaStream(stream.getAudioTracks());
+    if(!audioOnly.getAudioTracks().length){
+      toast("未采集到麦克风音频");
+      return false;
+    }
+
+    asrSocket?.close?.();
+    asrSocket = new WebSocket(asrUrl);
+    asrSocket.binaryType = "arraybuffer";
+    asrSocket.onopen = () => {
+      setCapability("#capAsr","pass","实时 ASR 已连接");
+      setCapability("#capMixed","pass","中英混说 已启用");
+      setCapability("#capHotword", hotwords.length ? "pass" : "warn", hotwords.length ? `专有名词 ${hotwords.length} 个` : "专有名词 未配置");
+      asrSocket.send(JSON.stringify({
+        type:"start",
+        targetPartialLatencyMs:500,
+        targetFinalLatencyMs:1500,
+        languageHints:["zh-CN","en-US"],
+        hotwords,
+        diarization:true,
+        audio:{ codec:"opus", sampleRate:48000, channelCount:1 }
+      }));
+      const mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus") ? "audio/webm;codecs=opus" : "audio/webm";
+      mediaRecorder = new MediaRecorder(audioOnly, { mimeType:mime, audioBitsPerSecond:32000 });
+      mediaRecorder.ondataavailable = event => {
+        if(event.data.size && asrSocket?.readyState === WebSocket.OPEN){
+          asrChunkStartedAt = Date.now();
+          asrSocket.send(event.data);
+        }
+      };
+      mediaRecorder.start(250);
+      recording = true;
+      startTimer();
+      $("#recordStatus").classList.add("live");
+      $("#recordStatus span").textContent = "ASR 流式记录中";
+      $("#startVoice").classList.add("hidden");
+      $("#stopVoice").classList.remove("hidden");
+      toast("实时 ASR WebSocket 已开始");
+    };
+    asrSocket.onmessage = handleAsrMessage;
+    asrSocket.onerror = () => {
+      setCapability("#capAsr","fail","实时 ASR 连接失败");
+      toast("ASR WebSocket 连接失败，已切换到浏览器兜底前请重新开始");
+      stopRecognition(false);
+    };
+    asrSocket.onclose = () => {
+      if(recording) stopRecognition(false);
+    };
+    return true;
+  }
+
+  function handleAsrMessage(event){
+    let payload = event.data;
+    try{ payload = JSON.parse(event.data); }catch(error){}
+    const latency = payload.latencyMs || (asrChunkStartedAt ? Date.now() - asrChunkStartedAt : 0);
+    if(payload.type === "partial" || payload.partial){
+      const text = payload.text || payload.partial;
+      setMetric("#asrPartialLatency", latency ? `${latency}ms` : "--", latency ? latency < 500 : null);
+      $("#liveCaption").textContent = `${payload.speaker || $("#currentSpeaker").value}: ${text}`;
+    }
+    if(payload.type === "final" || payload.final){
+      const text = payload.text || payload.final;
+      setMetric("#asrFinalLatency", latency ? `${latency}ms` : "--", latency ? latency < 1500 : null);
+      addSegment(`${payload.speaker || $("#currentSpeaker").value}: ${text}`);
+    }
+    if(payload.type === "diarization" && payload.speaker){
+      $("#currentSpeaker").value = payload.speaker;
+      renderVideoTiles();
+    }
+  }
+
+  function startRecognition(){
+    const { asrUrl } = getRuntimeConfig();
+    if(asrUrl){
+      startAsrStream().catch(error => {
+        console.warn(error);
+        setCapability("#capAsr","fail","实时 ASR 启动失败");
+        toast("实时 ASR 启动失败");
+      });
+      return;
+    }
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if(!SpeechRecognition){
+      toast("当前浏览器不支持内置语音识别，可使用手动转写");
+      return;
+    }
+    if(recording) return;
+    recognition = new SpeechRecognition();
+    recognition.lang = "zh-CN";
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.maxAlternatives = 1;
+    setCapability("#capAsr","warn","实时 ASR 浏览器兜底");
+    setCapability("#capMixed","warn","中英混说 需 ASR 服务");
+
+    recognition.onresult = (event) => {
+      let interim = "";
+      for(let i = event.resultIndex; i < event.results.length; i++){
+        const text = event.results[i][0].transcript.trim();
+        if(event.results[i].isFinal){
+          setMetric("#asrFinalLatency","浏览器",null);
+          addSegment(text);
+        }else{
+          interim += text;
+        }
+      }
+      if(interim){
+        setMetric("#asrPartialLatency","浏览器",null);
+        $("#liveCaption").textContent = `${$("#currentSpeaker").value}: ${interim}`;
+      }
+    };
+    recognition.onerror = (event) => {
+      toast(`语音识别异常：${event.error}`);
+      stopRecognition(false);
+    };
+    recognition.onend = () => {
+      if(recording){
+        try{ recognition.start(); }catch(error){ stopRecognition(false); }
+      }
+    };
+
+    try{
+      recognition.start();
+      recording = true;
+      startTimer();
+      $("#recordStatus").classList.add("live");
+      $("#recordStatus span").textContent = "记录中";
+      $("#startVoice").classList.add("hidden");
+      $("#stopVoice").classList.remove("hidden");
+      toast("语音记录已开始");
+    }catch(error){
+      toast("语音识别启动失败");
+    }
+  }
+
+  function stopRecognition(showToast = true){
+    recording = false;
+    if(mediaRecorder && mediaRecorder.state !== "inactive"){
+      try{ mediaRecorder.stop(); }catch(error){}
+    }
+    mediaRecorder = null;
+    if(asrSocket){
+      try{
+        if(asrSocket.readyState === WebSocket.OPEN) asrSocket.send(JSON.stringify({ type:"stop" }));
+        asrSocket.close();
+      }catch(error){}
+    }
+    asrSocket = null;
+    if(recognition){
+      try{ recognition.stop(); }catch(error){}
+    }
+    $("#recordStatus").classList.remove("live");
+    $("#recordStatus span").textContent = "已暂停";
+    $("#startVoice").classList.remove("hidden");
+    $("#stopVoice").classList.add("hidden");
+    if(showToast) toast("语音记录已暂停");
+  }
+
+  async function toggleCamera(){
+    if(cameraStream){
+      stopRtc(false);
+      cameraStream.getTracks().forEach(track => track.stop());
+      cameraStream = null;
+      $("#cameraBtn").textContent = "音视频";
+      renderVideoTiles();
+      return;
+    }
+    try{
+      await ensureMediaStream();
+      $("#cameraBtn").textContent = "关闭音视频";
+      runCapabilityCheck(false);
+      renderVideoTiles();
+    }catch(error){
+      toast("无法开启音视频采集");
+    }
+  }
+
+  function bindEvents(){
+    $("#meetingDate").value = today;
+    restoreRuntimeConfig();
+    runCapabilityCheck(false);
+    ["signalingUrl","asrUrl","llmUrl","diarizationUrl","hotwords"].forEach(id => {
+      $(`#${id}`).addEventListener("input", () => {
+        persistRuntimeConfig();
+        runCapabilityCheck(false);
+      });
+    });
+    $("#initRtc").addEventListener("click", () => {
+      initializeRtc().catch(error => {
+        console.warn(error);
+        setCapability("#capWebrtc","fail","WebRTC 初始化失败");
+        toast("WebRTC 初始化失败");
+      });
+    });
+    $("#connectAi").addEventListener("click", connectAiStreams);
+    $("#runCheck").addEventListener("click", () => runCapabilityCheck(true));
+    $("#addParticipant").addEventListener("click", () => {
+      const input = $("#participantInput");
+      const name = input.value.trim();
+      if(!name) return;
+      if(!state.participants.includes(name)) state.participants.push(name);
+      input.value = "";
+      render();
+    });
+    $("#participantInput").addEventListener("keydown", event => {
+      if(event.key === "Enter") $("#addParticipant").click();
+    });
+    $("#participantChips").addEventListener("click", event => {
+      const remove = event.target.dataset.removeSpeaker;
+      const speaker = event.target.closest("[data-speaker]")?.dataset.speaker;
+      if(remove){
+        state.participants = state.participants.filter(name => name !== remove);
+      }else if(speaker){
+        $("#currentSpeaker").value = speaker;
+      }
+      render();
+    });
+    $("#currentSpeaker").addEventListener("change", renderVideoTiles);
+    $("#confirmSpeaker").addEventListener("click", () => {
+      render();
+      toast(`当前发言人：${$("#currentSpeaker").value}`);
+    });
+    $("#topicGuard").addEventListener("input", () => {
+      state.segments = state.segments.map(seg => {
+        const next = classify(seg.text, seg.type === "noise" && seg.reason === "手动标记为无关" ? "noise" : null);
+        return { ...seg, type:next.type, important:next.important, reason:next.reason, agendaId:matchAgenda(seg.text) };
+      });
+      render();
+    });
+
+    $("#addAgenda").addEventListener("click", () => {
+      state.agendas.push({ id:uid(), title:"新议题", owner:state.participants[0] || "未确认", minutes:10, done:false });
+      render();
+    });
+    $("#addTodo").addEventListener("click", () => {
+      state.todos.unshift({ id:uid(), title:"新待办", owner:state.participants[0] || "未确认", due:"待定", status:"待确认" });
+      render();
+    });
+    $("#recordManual").addEventListener("click", () => addSegment($("#manualText").value));
+    $("#recordNoise").addEventListener("click", () => addSegment($("#manualText").value, "noise"));
+    $("#extractTodo").addEventListener("click", extractTodoFromManual);
+    $("#demoLine").addEventListener("click", () => {
+      $("#manualText").value = demoLines[demoIndex % demoLines.length];
+      demoIndex++;
+      addSegment($("#manualText").value);
+      startTimer();
+    });
+    $("#clearTranscript").addEventListener("click", () => {
+      state.segments = [];
+      render();
+      toast("会议记录已清空");
+    });
+    $("#exportMd").addEventListener("click", downloadMinutes);
+    $("#copyMinutes").addEventListener("click", copyMinutes);
+    $("#startVoice").addEventListener("click", startRecognition);
+    $("#stopVoice").addEventListener("click", () => stopRecognition(true));
+    $("#cameraBtn").addEventListener("click", toggleCamera);
+    $("#resetDemo").addEventListener("click", () => {
+      localStorage.removeItem("meeting-assistant-state");
+      state = structuredClone(seed);
+      demoIndex = 0;
+      stopRecognition(false);
+      render();
+      toast("示例数据已重置");
+    });
+
+    document.body.addEventListener("input", event => {
+      const target = event.target;
+      const agendaTitle = target.dataset.agendaTitle;
+      const agendaMinutes = target.dataset.agendaMinutes;
+      const todoTitle = target.dataset.todoTitle;
+      const todoDue = target.dataset.todoDue;
+      if(agendaTitle){
+        state.agendas.find(item => item.id === agendaTitle).title = target.value;
+      }
+      if(agendaMinutes){
+        const value = parseInt(target.value, 10);
+        state.agendas.find(item => item.id === agendaMinutes).minutes = Number.isFinite(value) ? value : target.value.replace(/\D/g,"") || 10;
+      }
+      if(todoTitle){
+        state.todos.find(item => item.id === todoTitle).title = target.value;
+      }
+      if(todoDue){
+        state.todos.find(item => item.id === todoDue).due = target.value;
+      }
+      saveState();
+      renderProgress();
+      renderMinutes();
+    });
+
+    document.body.addEventListener("change", event => {
+      const target = event.target;
+      const agendaOwner = target.dataset.agendaOwner;
+      const todoOwner = target.dataset.todoOwner;
+      const todoStatus = target.dataset.todoStatus;
+      const segmentSpeaker = target.dataset.segmentSpeaker;
+      if(agendaOwner) state.agendas.find(item => item.id === agendaOwner).owner = target.value;
+      if(todoOwner) state.todos.find(item => item.id === todoOwner).owner = target.value;
+      if(todoStatus) state.todos.find(item => item.id === todoStatus).status = target.value;
+      if(segmentSpeaker){
+        const segment = state.segments.find(item => item.id === segmentSpeaker);
+        segment.speaker = target.value;
+        if(segment.semantic){
+          if(segment.semantic.decisionMaker) segment.semantic.decisionMaker = target.value;
+          if(segment.semantic.opposer) segment.semantic.opposer = target.value;
+        }
+      }
+      render();
+    });
+
+    document.body.addEventListener("click", event => {
+      const target = event.target;
+      const removeAgenda = target.dataset.removeAgenda;
+      const removeTodo = target.dataset.removeTodo;
+      const completeTodo = target.dataset.completeTodo;
+      const toggleAgenda = target.dataset.toggleAgenda;
+      const removeSegment = target.dataset.removeSegment;
+      if(removeAgenda) state.agendas = state.agendas.filter(item => item.id !== removeAgenda);
+      if(removeTodo) state.todos = state.todos.filter(item => item.id !== removeTodo);
+      if(completeTodo){
+        const todo = state.todos.find(item => item.id === completeTodo);
+        todo.status = todo.status === "已完成" ? "进行中" : "已完成";
+      }
+      if(toggleAgenda){
+        const agenda = state.agendas.find(item => item.id === toggleAgenda);
+        agenda.done = !agenda.done;
+      }
+      if(removeSegment) state.segments = state.segments.filter(item => item.id !== removeSegment);
+      if(removeAgenda || removeTodo || completeTodo || toggleAgenda || removeSegment) render();
+    });
+  }
+
+  bindEvents();
+  render();
+})();
+</script>
+</body>
+</html>
